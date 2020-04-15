@@ -10,7 +10,7 @@ Vue.use(VueRouter);
 Vue.config.productionTip = false;
 
 const router = new VueRouter({
-  routes: [{ name: 'repo', path: 'repo/:pageIndex', component: RepoList }],
+  routes: [{ name: 'repo', path: '/repo/:pageIndex', component: RepoList }],
 });
 
 new Vue({

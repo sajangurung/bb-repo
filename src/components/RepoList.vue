@@ -15,35 +15,32 @@
         </div>
       </div>
     </div>
-    <table class="table table-bordered table-responsive-md" v-if="items.length">
-      <thead>
-        <tr>
-          <!-- <th width="16.66%">#</th> -->
-          <th width="16.66%">Repository Name</th>
-          <th width="16.66%">Repository Owner</th>
-          <th width="16.66%">Language</th>
-          <th width="16.66%">Last Updated</th>
-          <th width="16.66%">Deployment Environments</th>
-          <th width="16.66%">Last Pipeline Status</th>
-        </tr>
-        <tr v-for="item in items" :key="item.uuid">
-          <!-- <th width="16.66%">{{ item.uuid }}</th> -->
-          <th width="16.66%">{{ item.name }}</th>
-          <th width="16.66%">{{ item.owner.display_name }}</th>
-          <th width="16.66%">{{ item.language || 'n/a' }}</th>
-          <th width="16.66%">{{ new Date(item.updated_on).toLocaleString() }}</th>
-          <th width="16.66%">{{ item.environments.length ? item.environments : 'n/a' }}</th>
-          <th width="16.66%">
-            {{ item.pipelines.length ? item.pipelines[0] : 'n/a' }}
-          </th>
-        </tr>
-      </thead>
-    </table>
+    <div v-if="items.length" class="row d-flex flex-wrap">
+      <div class="col-lg-3 col-sm-6 mb-3" v-for="item in items" :key="item.uuid">
+        <div class="card">
+          <div class="card-body">
+            <h5 class="card-title">{{ item.name }}</h5>
+            <h6 class="card-subtitle mb-2 text-muted">{{ item.owner.display_name }}</h6>
+            <p class="card-text">
+              <small class="text-muted">Last updated {{ item.updated_on }}</small>
+            </p>
+            <p class="card-text">
+              {{ item.pipelines.length ? 'Last Pipeline status: ' + item.pipelines[0] : 'n/a' }}
+            </p>
+            <a href="#" class="card-link">
+              {{ item.environments.length ? item.environments.length + ' environments' : 'n/a' }}
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script>
 import Vue from 'vue';
+import formatRelative from 'date-fns/formatRelative';
+import parseISO from 'date-fns/parseISO';
 import Pagination from './Pagination.vue';
 import Loading from './Loading.vue';
 import parseToken from '../utils/parse-token';
@@ -109,11 +106,11 @@ export default {
     async getRepos() {
       const { pageIndex } = this.$route.params;
       const teams = await this.query(this.teamsUrl);
-      const org = teams.data.values.find((team) => team.username === config.ORG_NAME);
+      const org = teams.data.values.find((team) => team.username === config.VUE_APP_ORG_NAME);
       if (org) {
         const url = pageIndex
-          ? `${org.links.repositories.href}?page=${pageIndex}`
-          : org.links.repositories.href;
+          ? `${org.links.repositories.href}?page=${pageIndex}&pagelen=20&sort=-updated_on`
+          : `${org.links.repositories.href}?pagelen=20&sort=updated_on`;
         const repositories = await this.query(url);
         const resolvedValues = repositories.data.values.map(async (item) => {
           const environments = await this.query(this.deploymentUrl(item.owner.uuid, item.slug));
@@ -121,6 +118,7 @@ export default {
 
           return {
             ...item,
+            updated_on: formatRelative(parseISO(item.updated_on), new Date()),
             environments: environments.data.values
               ? environments.data.values.map((e) => e.name)
               : [],
@@ -178,3 +176,9 @@ export default {
   },
 };
 </script>
+
+<style>
+.card:hover {
+  background: rgb(248, 248, 248);
+}
+</style>
