@@ -11,7 +11,7 @@
           />
         </div>
         <div>
-          <Loading v-bind:is-loading="isLoading"> </Loading>
+          <Loading v-bind:is-loading="isLoading"></Loading>
         </div>
       </div>
     </div>
@@ -25,11 +25,11 @@
               <small class="text-muted">Last updated {{ item.updated_on }}</small>
             </p>
             <p class="card-text">
-              {{ item.pipelines.length ? 'Last Pipeline status: ' + item.pipelines[0] : 'n/a' }}
+              {{ item.pipelines.length ? "Last Pipeline status: " + item.pipelines[0] : "n/a" }}
             </p>
-            <a href="#" class="card-link">
-              {{ item.environments.length ? item.environments.length + ' environments' : 'n/a' }}
-            </a>
+            <a href="#" class="card-link">{{
+              item.environments.length ? item.environments.length + " environments" : "n/a"
+            }}</a>
           </div>
         </div>
       </div>
@@ -38,34 +38,34 @@
 </template>
 
 <script>
-import Vue from 'vue';
-import formatRelative from 'date-fns/formatRelative';
-import parseISO from 'date-fns/parseISO';
-import Pagination from './Pagination.vue';
-import Loading from './Loading.vue';
-import parseToken from '../utils/parse-token';
-import config from '../config';
+import Vue from "vue";
+import formatRelative from "date-fns/formatRelative";
+import parseISO from "date-fns/parseISO";
+import Pagination from "./Pagination.vue";
+import Loading from "./Loading.vue";
+import parseToken from "../utils/parse-token";
+import config from "../config";
 
 export default {
-  name: 'RepoList',
+  name: "RepoList",
   props: {
-    tableTitle: String,
+    tableTitle: String
   },
   components: {
     Pagination,
-    Loading,
+    Loading
   },
   methods: {
     onPageClicked(event) {
-      this.$router.push({ name: 'repo', params: { pageIndex: event } });
+      this.$router.push({ name: "repo", params: { pageIndex: event } });
     },
     async query(url) {
       this.isLoading = true;
       try {
         const response = await Vue.axios.get(url, {
           headers: {
-            Authorization: `Bearer ${localStorage.getItem('access_token')}`,
-          },
+            Authorization: `Bearer ${localStorage.getItem("access_token")}`
+          }
         });
         this.isLoading = false;
         return response;
@@ -74,7 +74,7 @@ export default {
         if (error.statusCode === 401) {
           window.location.href = config.BITBUCKET_LOGIN_REDIRECT;
         }
-        localStorage.removeItem('access_token');
+        localStorage.removeItem("access_token");
 
         return undefined;
       }
@@ -83,12 +83,12 @@ export default {
       const result = await this.query(url);
       const updatedResult = list.data.values
         ? {
-          ...result,
-          data: {
-            ...list.data,
-            values: [...list.data.values, ...result.data.values],
-          },
-        }
+            ...result,
+            data: {
+              ...list.data,
+              values: [...list.data.values, ...result.data.values]
+            }
+          }
         : result;
       if (result.data.next) {
         const updated = await this.queryAll(result.data.next, updatedResult);
@@ -96,8 +96,8 @@ export default {
           ...updated,
           data: {
             ...updated.data,
-            values: [...updatedResult.data.values, ...updated.data.values],
-          },
+            values: [...updatedResult.data.values, ...updated.data.values]
+          }
         };
       }
 
@@ -106,32 +106,30 @@ export default {
     async getRepos() {
       const { pageIndex } = this.$route.params;
       const teams = await this.query(this.teamsUrl);
-      const org = teams.data.values.find((team) => team.username === config.VUE_APP_ORG_NAME);
+      const org = teams.data.values.find(team => team.username === config.VUE_APP_ORG_NAME);
       if (org) {
         const url = pageIndex
           ? `${org.links.repositories.href}?page=${pageIndex}&pagelen=20&sort=-updated_on`
           : `${org.links.repositories.href}?pagelen=20&sort=updated_on`;
         const repositories = await this.query(url);
-        const resolvedValues = repositories.data.values.map(async (item) => {
-          const environments = await this.query(this.deploymentUrl(item.owner.uuid, item.slug));
-          const pipelines = await this.query(this.pipelineUrl(item.owner.uuid, item.slug));
+        const resolvedValues = repositories.data.values.map(async repo => {
+          const environments = await this.query(this.deploymentUrl(repo.owner.uuid, repo.slug));
+          const pipelines = await this.query(this.pipelineUrl(repo.owner.uuid, repo.slug));
 
           return {
-            ...item,
-            updated_on: formatRelative(parseISO(item.updated_on), new Date()),
-            environments: environments.data.values
-              ? environments.data.values.map((e) => e.name)
-              : [],
-            pipelines: pipelines.data.values ? pipelines.data.values.map((p) => p.state.name) : [],
+            ...repo,
+            updated_on: formatRelative(parseISO(repo.updated_on), new Date()),
+            environments: environments.data.values ? environments.data.values.map(e => e.name) : [],
+            pipelines: pipelines.data.values ? pipelines.data.values.map(p => p.state.name) : []
           };
         });
         this.items = await Promise.all(resolvedValues);
 
         const { pagelen, size, page } = repositories.data;
-        this.pages = [...Array(Math.floor(size / pagelen)).keys()].map((key) => key + 1);
+        this.pages = [...Array(Math.floor(size / pagelen)).keys()].map(key => key + 1);
         this.currentPage = page;
       }
-    },
+    }
   },
   data() {
     return {
@@ -140,13 +138,16 @@ export default {
       items: [],
       pages: this.pages,
       currentPage: 0,
-      teamsUrl: 'teams?role=member',
+      teamsUrl: "teams?role=member",
       pipelineUrl(workspaceId, repoSlug) {
         return `repositories/${workspaceId}/${repoSlug}/pipelines/`;
       },
       deploymentUrl(workspaceId, repoSlug) {
         return `repositories/${workspaceId}/${repoSlug}/environments/`;
       },
+      environmentConfigUrl(workspaceId, repoSlug, environmentId) {
+        return `repositories/${workspaceId}/${repoSlug}/deployments_config/environments/${environmentId}/variables?pagelen=50`;
+      }
     };
   },
   computed: {
@@ -155,13 +156,13 @@ export default {
     },
     token() {
       return parseToken(this.$route.path) || localStorage.access_token;
-    },
+    }
   },
   watch: {
     token(val) {
       localStorage.access_token = val;
     },
-    $route: 'getRepos',
+    $route: "getRepos"
   },
   created() {},
   async mounted() {
@@ -173,7 +174,7 @@ export default {
       return;
     }
     await this.getRepos();
-  },
+  }
 };
 </script>
 
